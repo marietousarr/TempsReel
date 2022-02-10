@@ -108,7 +108,10 @@ private:
      */
     void ServerTask(void *arg);
     
-    void CheckBattery();
+    /**
+     * @brief Thread checking the battery
+     */
+    void CheckBattery(void *arg);
      
     /**
      * @brief Thread sending data to monitor.
@@ -135,6 +138,8 @@ private:
      */
     void MoveTask(void *arg);
     
+    
+    
     /**********************************************************************/
     /* Queue services                                                     */
     /**********************************************************************/
@@ -151,7 +156,6 @@ private:
      * @return Message read
      */
     Message *ReadInQueue(RT_QUEUE *queue);
-    
 
 };
 

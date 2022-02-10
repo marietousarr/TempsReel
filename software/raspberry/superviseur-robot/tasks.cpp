@@ -172,6 +172,11 @@ void Tasks::Run() {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    
+    if (err = rt_task_start(&th_batterylvl, (void(*)(void*)) & Tasks::CheckBattery, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
 
     cout << "Tasks launched" << endl << flush;
 }
@@ -420,15 +425,15 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
     return msg;
 }
 
-void Tasks::CheckBattery(){
+void Tasks::CheckBattery(void *arg){
+    
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     rt_task_set_periodic(NULL, TM_NOW, 500000000);
-    while(1){
+    while (1) {
         rt_task_wait_period(NULL);
         Message * BatteryLevel;
         BatteryLevel = robot.Write(robot.GetBattery());
-        cout << "Battery Level : " << BatteryLevel->ToString() << endl << flush;
+        cout << "Battery Level: " << BatteryLevel->ToString() << endl << flush;
         WriteInQueue(&q_messageToMon, BatteryLevel);
     }
 }
-

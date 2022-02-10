@@ -426,14 +426,26 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
 }
 
 void Tasks::CheckBattery(void *arg){
+    int rs;
     
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    // Synchronization barrier (waiting that all tasks are starting)
+    rt_sem_p(&sem_barrier, TM_INFINITE);
     rt_task_set_periodic(NULL, TM_NOW, 500000000);
+    
     while (1) {
+        
         rt_task_wait_period(NULL);
-        Message * BatteryLevel;
-        BatteryLevel = robot.Write(robot.GetBattery());
-        cout << "Battery Level: " << BatteryLevel->ToString() << endl << flush;
-        WriteInQueue(&q_messageToMon, BatteryLevel);
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        rs = robotStarted;
+        rt_mutex_release(&mutex_robotStarted);
+        if (rs == 1) {
+            Message * BatteryLevel;
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            BatteryLevel = robot.Write(robot.GetBattery());
+            rt_mutex_release(&mutex_robot);
+            cout << "Battery Level: " << BatteryLevel->ToString() << endl << flush;
+            WriteInQueue(&q_messageToMon, BatteryLevel);
+        }
     }
 }

@@ -104,6 +104,14 @@ void Tasks::Init() {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_sem_create(&sem_turnoff, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_sem_create(&sem_reset, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Semaphores created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -138,6 +146,14 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_task_create(&th_reloadwd, "th_reloadwd", 0, PRIORITY_RELOADWD, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_create(&th_turnoff, "th_turnoff", 0, PRIORITY_RELOADWD, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_create(&th_reset, "th_reset", 0, PRIORITY_RELOADWD, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -191,6 +207,14 @@ void Tasks::Run() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_task_start(&th_reloadwd, (void(*)(void*)) & Tasks::ReloadWD, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_start(&th_turnoff, (void(*)(void*)) & Tasks::TurnOff, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_start(&th_reset, (void(*)(void*)) & Tasks::ResetRobot, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -288,7 +312,8 @@ void Tasks::ReceiveFromMonTask(void *arg) {
 
         if (msgRcv->CompareID(MESSAGE_MONITOR_LOST)) {
             delete(msgRcv);
-            exit(-1);
+            rt_sem_v(&sem_turnoff);
+
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_COM_OPEN)) {
             rt_sem_v(&sem_openComRobot);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITHOUT_WD)) {
@@ -301,7 +326,8 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             wd = 1;
             rt_mutex_release(&mutex_watchdog);
             rt_sem_v(&sem_startRobot);
-
+        } else if (msgRcv->CompareID(MESSAGE_ROBOT_RESET)){
+            rt_sem_v(&sem_reset);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_GO_FORWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_BACKWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_LEFT) ||
@@ -515,5 +541,60 @@ void Tasks::ReloadWD(void *arg){
             Watchdog = robot.Write(robot.ReloadWD());
             rt_mutex_release(&mutex_robot);
         }
+    }
+}
+
+void Tasks::TurnOff(void *arg){
+    int rs;
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    // Synchronization barrier (waiting that all tasks are starting)
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    
+    /**************************************************************************************/
+    /* The task TurnOff starts here                                                    */
+    /**************************************************************************************/
+    
+
+    rt_sem_p(&sem_turnoff, TM_INFINITE);
+    rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+    rs = robotStarted;
+    rt_mutex_release(&mutex_robotStarted);
+    if (rs == 1) {
+
+        rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+        robot.Write(robot.PowerOff());
+        rt_mutex_release(&mutex_robot);
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        robotStarted = 0;
+        rt_mutex_release(&mutex_robotStarted);
+
+        Stop();
+    }
+}
+
+void Tasks::ResetRobot(void *arg){
+    int rs;
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    // Synchronization barrier (waiting that all tasks are starting)
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    
+    /**************************************************************************************/
+    /* The task ResetRobot starts here                                                    */
+    /**************************************************************************************/
+    
+    while(1){
+        rt_sem_p(&sem_reset, TM_INFINITE);
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        rs = robotStarted;
+        rt_mutex_release(&mutex_robotStarted);
+        if (rs == 1) {
+
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            robot.Write(robot.Reset());
+            rt_mutex_release(&mutex_robot);
+            rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+            robotStarted = 0;
+            rt_mutex_release(&mutex_robotStarted);
+        }   
     }
 }

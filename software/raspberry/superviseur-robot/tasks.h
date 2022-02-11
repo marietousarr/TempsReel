@@ -79,6 +79,8 @@ private:
     RT_TASK th_move;
     RT_TASK th_batterylvl;
     RT_TASK th_reloadwd;
+    RT_TASK th_turnoff;
+    RT_TASK th_reset;
     
     /**********************************************************************/
     /* Mutex                                                              */
@@ -97,6 +99,8 @@ private:
     RT_SEM sem_serverOk;
     RT_SEM sem_startRobot;
     RT_SEM sem_reloadwd;
+    RT_SEM sem_turnoff;
+    RT_SEM sem_reset;
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -146,6 +150,16 @@ private:
      * @brief Thread reloading the watchdog
      */
     void ReloadWD(void *arg);
+    
+    /**
+     * @brief Thread turning off everything
+     */
+    void TurnOff(void *arg);
+    
+    /**
+     * @brief Thread reset robot
+     */
+    void ResetRobot(void *arg);
     
     
     

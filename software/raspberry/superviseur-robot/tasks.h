@@ -101,6 +101,8 @@ private:
     RT_SEM sem_reloadwd;
     RT_SEM sem_turnoff;
     RT_SEM sem_reset;
+    RT_SEM sem_move;
+
 
     /**********************************************************************/
     /* Message queues                                                     */

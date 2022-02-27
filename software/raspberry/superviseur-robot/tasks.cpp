@@ -20,14 +20,16 @@
 
 // Déclaration des priorités des taches
 #define PRIORITY_TSERVER 30
-#define PRIORITY_TOPENCOMROBOT 20
+#define PRIORITY_TOPENCOMROBOT 25
 #define PRIORITY_TMOVE 20
 #define PRIORITY_TSENDTOMON 22
 #define PRIORITY_TRECEIVEFROMMON 25
-#define PRIORITY_TSTARTROBOT 20
+#define PRIORITY_TSTARTROBOT 2
 #define PRIORITY_TCAMERA 21
 #define PRIORITY_TBATTERYLVL 15
-#define PRIORITY_RELOADWD 21
+#define PRIORITY_RELOADWD 26
+#define PRIORITY_RESET 20
+#define PRIORITY_TURNOFF 29
 
 /*
  * Some remarks:
@@ -153,11 +155,11 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_create(&th_turnoff, "th_turnoff", 0, PRIORITY_RELOADWD, 0)) {
+    if (err = rt_task_create(&th_turnoff, "th_turnoff", 0, PRIORITY_TURNOFF, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_create(&th_reset, "th_reset", 0, PRIORITY_RELOADWD, 0)) {
+    if (err = rt_task_create(&th_reset, "th_reset", 0, PRIORITY_RESET, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
